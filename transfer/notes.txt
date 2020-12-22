@@ -1,0 +1,95 @@
+action transfer learning
+
+
+policy transfer learning
+
+
+replay transfer 
+
+
+noise from other network
+
+
+
+inter agent transfer learning
+
+shouldnt learn better but faster
+
+policy transfer, critic transfer, buffer transfer, reward shaping
+
+
+sample other policies for exploration for critic to learn
+
+policy learns from multiple critics
+
+
+other:
+
+might could would = bad
+first paragraph = what paper is about
+specific application - dont be vague
+agents have ____ - give example
+avoid human comparison
+
+
+1- intro first paragraph:
+define problem
+what is it
+why important
+
+2- define difficulty (related work)
+-general difficulty, how addressed, second more specific difficulty
+
+3 - "in this paper..." what you are going to do / what are you pitching (approach)
+"the key contribution/ idea"
+
+4 - how does solution solve difficulty?
+" what is cool about this "
+
+5 - what is the impact/ results / contributions / results (results) (can use page six terms)
+speedups? performance? what leads into?
+
+expand into paper
+shrink into abstract
+
+that used for differentiat
+,which , for additional info
+
+advice
+
+dont: start scentence with "there are"
+"can be" too wishy washy - does is better
+avoid filler like "very, extreme"
+repetition is worse than clarity
+	except math to intuition
+"propose" is not direct enough "what you did" better
+dont use vague wording
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+

@@ -2,7 +2,7 @@ import datetime
 from code.reward_2 import * # Agent Reward 
 from code.curriculum import * # Agent Curriculum
 from mod_funcs import * 
-
+from math import sqrt
 
 def globalRewardMod(sim):
     sim.data["Mod Name"] = "global"
@@ -572,7 +572,14 @@ def lowVisibility(sim):
 
 def simpleReward(data):
     number_agents=data["Number of Agents"]
-    globalReward=np.sum(data["Item Held"])
+
+    #globalReward=np.sum(data["Item Held"])
+    d=data["Item Held"]
+    globalReward=sum(d[0])/len(d[0])
+    #d=np.sum(d[:,-4:],axis=0)
+    #if data["Global Recipe"]:
+    #    d*=number_agents
+    #globalReward=d[0]*1.0+d[1]*1.33+d[2]*1.66+d[3]*2.0
     data["Global Reward"] = globalReward
     data["Agent Rewards"] = np.ones(number_agents) * globalReward
 
@@ -605,13 +612,89 @@ def recipePoi(sim):
     #sim.data["Reward Function"]=assignGlobalRewardSimple  #reward for each recipe completed
     sim.data["Reward Function"]=simpleReward              #reward for each step of recipe completed 
     
-    sim.data["Recipe"] = np.array([0,3,2],dtype=np.int32) #recipe, each item is a POI type from 0 to (N-Poi Types)-1 
+    sim.data["Recipe"] = np.array([0,1,2,3],dtype=np.int32) #recipe, each item is a POI type from 0 to (N-Poi Types)-1 
     sim.data["Recipe Size"]=len(sim.data["Recipe"])
-    sim.data["Ordered"] = 1                              #flag for whether order matters
+    sim.data["Ordered"] = False                              #flag for whether order matters
     sim.data["Number of POI Types"] = 4
-    sim.data["Coupling Limit"]=5                            #max number of agents which can see view a poi at a time 
-    
+    sim.data["Coupling Limit"]=15                            #max number of agents which can see view a poi at a time 
+    sim.data["Global Recipe"]=True
     sim.worldTrainBeginFuncCol.append(  resetItemHeld  )
 
+def multiReward(sim):
+    
+    data=sim.data
+    number_agents = data['Number of Agents']
+    number_pois = data['Number of POIs'] 
+    
+    historyStepCount = data["Steps"]
+    #coupling = data["Coupling"]
+    observationRadiusSqr = data["Observation Radius"] ** 2
+    agentPositionHistory = data["Agent Position History"]
+    poiValueCol = data['Poi Values']
+    poiPositionCol = data["Poi Positions"]
+  
+    
+    #recipe = data["Recipe"]
+    #recipeSize = data["Recipe Size"]
+    nPoiTypes  = data["Number of POI Types"]
+    #ordered    = data["Ordered"] 
+    
+    Inf = float("inf")
+    
+    
+    rewards=[0.0 for i in range(nPoiTypes + 1)]
+ 
+    
+    for poiIndex in range(number_pois):
+        poiType = poiIndex % nPoiTypes
+        
+    
+        
+        stepIndex = historyStepCount
+            
+            
+        for agentIndex in range(number_agents):
+            # Calculate separation distance between poi and agent
+            separation0 = poiPositionCol[poiIndex, 0] - agentPositionHistory[stepIndex, agentIndex, 0]
+            separation1 = poiPositionCol[poiIndex, 1] - agentPositionHistory[stepIndex, agentIndex, 1]
+            distanceSqr = separation0 * separation0 + separation1 * separation1
+            
+            if distanceSqr < observationRadiusSqr:
+                rewards[poiType]+= 1.0/float(number_agents)
+            #rewards[poiType]+=-sqrt(distanceSqr)
+            dist=0.0
+            if poiIndex == 0:
+                min_dist=1e9
+                
+                for otherIndex in range(number_agents):
+                    # Calculate separation distance between poi and agent
+                    separation0 = agentPositionHistory[stepIndex, otherIndex, 0] - agentPositionHistory[stepIndex, agentIndex, 0]
+                    separation1 = agentPositionHistory[stepIndex, otherIndex, 1] - agentPositionHistory[stepIndex, agentIndex, 1]
+                    distanceSqr = separation0 * separation0 + separation1 * separation1
+                    
+                    dist=sqrt( distanceSqr )
+                    if dist<min_dist and dist>0:
+                        min_dist=dist
+                            
+                rewards[-1]+= -min_dist    
+                
+    return rewards
 
 
+def posInit(data,mu,sig):
+    number_agents = data['Number of Agents']
+    world_width = data['World Width']
+    world_length = data['World Length']
+    agentInitSize = sig
+    
+    worldSize = np.array([world_width, world_length])
+    
+    # Initialize all agents in the np.randomly in world
+    positionCol = np.random.rand(number_agents, 2)-0.5 
+    positionCol *= agentInitSize
+    positionCol +=0.5 + (np.random.rand(2)-0.5) * mu 
+
+    positionCol *= worldSize
+    data['Agent Positions BluePrint'] = positionCol
+    angleCol = np.random.uniform(-np.pi, np.pi, number_agents)
+    data['Agent Orientations BluePrint'] = np.vstack((np.cos(angleCol), np.sin(angleCol))).T

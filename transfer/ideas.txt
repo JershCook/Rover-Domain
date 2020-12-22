@@ -1,0 +1,22 @@
+ideas for transfer:
+
+
+l2 regularize old weights
+
+mse difference transfer
+
+
+
+Inter-agent transfer learning
+
+-- few critic many actors
+
+-- policy swapping (save examples in replay buffer)
+
+-- 1 critic??
+
+-- advantage estimate (V_global-Q_agent)
+
+-- linear combination of gradients/ Q? (probs bad)
+
+-- 

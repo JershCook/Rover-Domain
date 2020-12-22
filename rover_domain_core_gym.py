@@ -29,36 +29,48 @@ pyximport.install()  # For cython(pyx) code
 import matplotlib.pyplot as plt
 
 class RoverDomainGym(SimulationCore):
-    def __init__(self):
+    def __init__(self,nagent,nsteps,Pos,Vals):
         SimulationCore.__init__(self)
 
-        self.data["Number of Agents"] = 30
-        self.data["Number of POIs"] = 8
-        self.data["Minimum Distance"] = 1.0
-        self.data["Steps"] = 100
-        self.data["Trains per Episode"] = 50
+        self.data["Number of Agents"] = nagent
+        self.data["Number of POIs"] = 6
+        self.data["Minimum Distance"] = 4.0
+        self.data["Steps"] = nsteps
+        self.data["Trains per Episode"] = 100
         self.data["Tests per Episode"] = 1
         self.data["Number of Episodes"] = 5000
         self.data["Specifics Name"] = "test"
         self.data["Mod Name"] = "global"
         self.data["World Index"] = 0
 
+        self.data["Coupling"] = 3
+        self.data["Observation Radius"] = 4.1
+
         # Add Rover Domain Construction Functionality
         # Note: reset() will generate random world based on seed
-        self.data["World Width"] = 50
-        self.data["World Length"] = 50
-        self.data['Poi Static Values'] = np.array([1.0, 2.0, 3.0, 4.0, 5.0, 6.0, 7.0, 8.0])
-        self.data['Poi Relative Static Positions'] = np.array([
+        self.data["World Width"] = 30
+        self.data["World Length"] = 30
+        self.data['Poi Static Values'] =Vals# np.array([0.1, 0.1, 0.5,0.3, 0.0, 0.0])#, 6.0, 7.0, 8.0])
+        self.data['Poi Relative Static Positions'] = Pos
+        '''
+         np.array([
             [0.0, 0.0],
+            [1.0, 1.0],
             [0.0, 1.0],
-            [1.0, 0.0],
+            [1.0, 0.5],
+            [0.0, 0.5],
+            [1.0, 0.0]
+        ])
+        '''
+        '''  
             [1.0, 1.0],
             [1.0, 0.5],
             [0.5, 1.0],
             [0.0, 0.5],
             [0.5, 0.0]
         ])
-        self.data['Agent Initialization Size'] = 0.1
+        '''
+        self.data['Agent Initialization Size'] = 0.4
         self.trainBeginFuncCol.append(world_setup.blueprintStatic)
         self.trainBeginFuncCol.append(world_setup.blueprintAgentInitSize)
         self.worldTrainBeginFuncCol.append(world_setup.initWorld)
@@ -97,8 +109,10 @@ class RoverDomainGym(SimulationCore):
         step() return [reward] (double): Performance defined by 
             data["Evaluation Function"]
         """
-        self.data["Coupling"] = 1
-        self.data["Observation Radius"] = 4.0
+        
+        #self.data["Reward Function"] = rewards.assignDifferenceReward
+        #self.data["Evaluation Function"] = rewards.assignDifferenceReward
+
         self.data["Reward Function"] = rewards.assignGlobalReward
         self.data["Evaluation Function"] = rewards.assignGlobalReward
 
@@ -109,8 +123,11 @@ class RoverDomainGym(SimulationCore):
 
         # TODO make these be hidden class attributes, no reason to have them be lambdas
         # TODO for what should be a fixed-environment scenario
-        self.worldTrainBeginFuncCol.append(
-            lambda data: data.update({"Gym Reward": np.zeros(data['Number of Agents'])})
+        self.worldTrainStepFuncCol.append(
+            lambda data: data["Reward Function"](data)
+        )
+        self.worldTrainStepFuncCol.append(
+            lambda data: data.update({"Gym Reward":  data["Agent Rewards"]})
         )
         self.worldTestBeginFuncCol.append(
             lambda data: data.update({"Gym Reward": 0})

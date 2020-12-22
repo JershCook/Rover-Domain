@@ -314,6 +314,8 @@ cpdef giveKey(data):
     cdef int recipeSize = data["Recipe Size"]
     cdef int nPoiTypes  = data["Number of POI Types"]
     cdef int ordered    = data["Ordered"]  
+    cdef int        globe= data["Global Recipe"]
+
    
     cdef int agentIndex,  poiIndex, closestIndex, recipeIndex, poiType
     cdef double distanceSqr,closestDist
@@ -362,13 +364,17 @@ cpdef giveKey(data):
                 #if order doesnt matter and poi in recipe, grab key from poi
                 if not ordered:
                     if recipe[recipeIndex]==poiType:
-                        itemHeld[agentIndex][recipeIndex]=1
+                        itemHeld[0][recipeIndex]=1
                 
                 #if order matters,        
                 else:
                     #check to see if previous parts of recipe fulfilled
-                    if itemHeld[agentIndex][recipeIndex] == 1 or recipe[recipeIndex]==poiType:
-                        itemHeld[agentIndex][recipeIndex] = 1
+                    if globe:
+                        IDX=0
+                    else:
+                        IDX=agentIndex
+                    if itemHeld[IDX][recipeIndex] == 1 or recipe[recipeIndex]==poiType:
+                        itemHeld[IDX][recipeIndex] = 1
                     
                     #if not, break the loop ans stop checking
                     else: 
@@ -400,7 +406,7 @@ cpdef doAgentSenseRecipe(data):
     cdef int       recipeSize = data["Recipe Size"]
     cdef int       nPoiTypes   = data["Number of POI Types"]
     cdef int         ordered  = data["Ordered"]  
-    
+    cdef int        globe   = data["Global Recipe"]
     cdef int[:,:] itemHeld = data["Item Held"]
     
     #            agent view + poi view + recipe seen+ items grabbed from recipe 
@@ -503,7 +509,11 @@ cpdef doAgentSenseRecipe(data):
             observationCol[agentIndex,shift+recipeIndex] = <double>recipe[recipeIndex]
             
             #keys obtained
-            observationCol[agentIndex,shift+recipeIndex+recipeSize] = <double>itemHeld[agentIndex,recipeIndex]
+            if globe:
+                IDX=0
+            else:
+                IDX=agentIndex
+            observationCol[agentIndex,shift+recipeIndex+recipeSize] = <double>itemHeld[IDX,recipeIndex]
             
             
     data["Agent Observations"] = observationCol
@@ -512,3 +522,49 @@ cpdef doAgentSenseRecipe(data):
 def doAgentSenseRecipe2(data):
     giveKey(data)    
     doAgentSenseRecipe(data)
+
+
+
+
+
+@cython.boundscheck(False)  # Deactivate bounds checking
+@cython.wraparound(False)   # Deactivate negative indexing.
+
+cpdef IndivReward(data):
+    
+    cdef int number_agents = data['Number of Agents']
+    cdef int number_pois = data['Number of POIs'] 
+    cdef double minDistanceSqr = data["Minimum Distance"] ** 2
+    cdef int historyStepCount = data["Steps"] + 1
+    cdef int coupling = data["Coupling"]
+    cdef double observationRadiusSqr = data["Observation Radius"] ** 2
+    cdef double[:, :] agentPositionHistory = data["Agent Positions"]
+    cdef double[:] poiValueCol = data['Poi Values']
+    cdef double[:, :] poiPositionCol = data["Poi Positions"]
+  
+    
+    cdef int poiIndex, stepIndex, agentIndex, observerCount
+    cdef double separation0, separation1, closestObsDistanceSqr, distanceSqr, stepClosestObsDistanceSqr
+    cdef double Inf = float("inf")
+    
+    cdef double globalReward = 0.0
+ 
+    
+    for poiIndex in range(number_pois):
+        closestObsDistanceSqr = Inf
+        
+
+        for agentIndex in range(number_agents):
+            # Calculate separation distance between poi and agent
+            separation0 = poiPositionCol[poiIndex, 0] - agentPositionHistory[agentIndex, 0]
+            separation1 = poiPositionCol[poiIndex, 1] - agentPositionHistory[agentIndex, 1]
+            distanceSqr = separation0 * separation0 + separation1 * separation1
+            
+            # Check if agent observes poi, update closest step distance
+            if distanceSqr < observationRadiusSqr:    
+                globalReward += poiValueCol[poiIndex]
+                    
+                        
+    data["Global Reward"] = globalReward
+    data["Agent Rewards"] = np.ones(number_agents) * globalReward 
+    
